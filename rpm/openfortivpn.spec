@@ -1,5 +1,5 @@
 Name:           openfortivpn
-Version:        1.11.0
+Version:        1.14.1
 Release:        1
 Summary:        Client for PPP+SSL VPN tunnel services compatible with Fortinet
 License:        GPLv3+
@@ -8,6 +8,7 @@ Source0:        %{name}-%{version}.tar.gz
 BuildRequires:  autoconf
 BuildRequires:  automake
 BuildRequires:  openssl-devel
+BuildRequires:  pkgconfig(systemd)
 Requires:       ppp
 
 %description
@@ -31,6 +32,7 @@ rm -f %{buildroot}/%{_datadir}/openfortivpn/config.template
 %defattr(-,root,root,-)
 %{_bindir}/openfortivpn
 %{_mandir}/man1/openfortivpn.1*
+%{_unitdir}/openfortivpn@.service
 %dir %{_sysconfdir}/openfortivpn
 %config(noreplace) %{_sysconfdir}/openfortivpn/config
 %doc README.md
