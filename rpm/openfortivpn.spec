@@ -5,6 +5,7 @@ Summary:        Client for PPP+SSL VPN tunnel services compatible with Fortinet
 License:        GPLv3+
 URL:            https://github.com/adrienverge/openfortivpn
 Source0:        %{name}-%{version}.tar.gz
+Patch0:         0001-Add-trust-all-certs-option.patch
 BuildRequires:  autoconf
 BuildRequires:  automake
 BuildRequires:  openssl-devel
@@ -17,7 +18,7 @@ process and operates the communication between the gateway and this process.
 It is compatible with Fortinet VPNs.
 
 %prep
-%autosetup -n %{name}-%{version}/upstream
+%autosetup -p1 -n %{name}-%{version}/upstream
 
 %build
 autoreconf -fi

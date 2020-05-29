@@ -1,0 +1,114 @@
+From 8206bb00d14ee451df80869dfaa3070b7f6200f5 Mon Sep 17 00:00:00 2001
+From: Alexey Andreev <a.andreev@omprussia.ru>
+Date: Fri, 29 May 2020 14:49:38 +0300
+Subject: [PATCH] Add `trust-all-certs` option.
+
+Gateway certificate won't be rejected after the failed check
+if `trust-all-certs` is set.
+
+Signed-off-by: Alexey Andreev <a.andreev@omprussia.ru>
+Signed-off-by: Andrey Okoshkin <a.okoshkin@omprussia.ru>
+---
+ src/config.c | 12 ++++++++++++
+ src/config.h |  1 +
+ src/main.c   |  3 +++
+ src/tunnel.c |  6 ++++++
+ 4 files changed, 22 insertions(+)
+
+diff --git a/src/config.c b/src/config.c
+index 95b66e1..619a5fa 100644
+--- a/src/config.c
++++ b/src/config.c
+@@ -73,6 +73,7 @@ const struct vpn_config invalid_cfg = {
+ 	.user_cert = NULL,
+ 	.user_key = NULL,
+ 	.insecure_ssl = -1,
++	.trust_all_certs = -1,
+ 	.cipher_list = NULL,
+ 	.min_tls = -1,
+ 	.seclevel_1 = -1,
+@@ -402,6 +403,15 @@ int load_config(struct vpn_config *cfg, const char *filename)
+ 				continue;
+ 			}
+ 			cfg->insecure_ssl = insecure_ssl;
++		} else if (strcmp(key, "trust-all-certs") == 0) {
++			int trust_all_certs = strtob(val);
++
++			if (trust_all_certs < 0) {
++				log_warn("Bad trust-all-certs in config file: \"%s\".\n",
++				         val);
++				continue;
++			}
++			cfg->trust_all_certs = trust_all_certs;
+ 		} else if (strcmp(key, "cipher-list") == 0) {
+ 			free(cfg->cipher_list);
+ 			cfg->cipher_list = strdup(val);
+@@ -550,6 +560,8 @@ void merge_config(struct vpn_config *dst, struct vpn_config *src)
+ 	}
+ 	if (src->insecure_ssl != invalid_cfg.insecure_ssl)
+ 		dst->insecure_ssl = src->insecure_ssl;
++	if (src->trust_all_certs != invalid_cfg.trust_all_certs)
++		dst->trust_all_certs = src->trust_all_certs;
+ 	if (src->cipher_list) {
+ 		free(dst->cipher_list);
+ 		dst->cipher_list = src->cipher_list;
+diff --git a/src/config.h b/src/config.h
+index c41a953..0c3814b 100644
+--- a/src/config.h
++++ b/src/config.h
+@@ -113,6 +113,7 @@ struct vpn_config {
+ 	char			*user_cert;
+ 	char			*user_key;
+ 	int			insecure_ssl;
++	int			trust_all_certs;
+ 	int			min_tls;
+ 	int			seclevel_1;
+ 	char			*cipher_list;
+diff --git a/src/main.c b/src/main.c
+index 1c4b949..9a059cb 100644
+--- a/src/main.c
++++ b/src/main.c
+@@ -149,6 +149,7 @@ PPPD_USAGE \
+ "                                Also enable TLS v1.0 if applicable.\n" \
+ "                                If your server requires a specific cipher or protocol,\n" \
+ "                                consider using --cipher-list and/or --min-tls instead.\n" \
++"  --trust-all-certs             Trust all gateway certificates.\n" \
+ "  --cipher-list=<ciphers>       OpenSSL ciphers to use. If default does not work\n" \
+ "                                you can try with the cipher suggested in the output\n" \
+ "                                of 'openssl s_client -connect <host:port>'\n" \
+@@ -222,6 +223,7 @@ int main(int argc, char **argv)
+ 		.user_cert = NULL,
+ 		.user_key = NULL,
+ 		.insecure_ssl = 0,
++		.trust_all_certs = 0,
+ #ifdef TLS1_2_VERSION
+ 		.min_tls = TLS1_2_VERSION,
+ #else
+@@ -257,6 +259,7 @@ int main(int argc, char **argv)
+ 		{"user-key",        required_argument, NULL, 0},
+ 		{"trusted-cert",    required_argument, NULL, 0},
+ 		{"insecure-ssl",    no_argument, &cli_cfg.insecure_ssl, 1},
++		{"trust-all-certs", no_argument, &cli_cfg.trust_all_certs, 1 },
+ 		{"cipher-list",     required_argument, NULL, 0},
+ 		{"min-tls",         required_argument, NULL, 0},
+ 		{"seclevel-1",      no_argument, &cli_cfg.seclevel_1, 1},
+diff --git a/src/tunnel.c b/src/tunnel.c
+index 8193914..8ce4a1e 100644
+--- a/src/tunnel.c
++++ b/src/tunnel.c
+@@ -753,6 +753,12 @@ static int ssl_verify_cert(struct tunnel *tunnel)
+ 	for (i = 0; i < SHA256LEN; i++)
+ 		sprintf(&digest_str[2 * i], "%02x", digest[i]);
+ 	digest_str[SHA256STRLEN - 1] = '\0';
++	// Do we trust all certificates?
++	if (tunnel->config->trust_all_certs > 0) {
++		log_debug("Trusted gateway certificate digest: %s\n", digest_str);
++		ret = 0;
++		goto free_cert;
++	}
+ 	// Is it in whitelist?
+ 	for (elem = tunnel->config->cert_whitelist; elem != NULL;
+ 	     elem = elem->next)
+-- 
+2.26.2
+
