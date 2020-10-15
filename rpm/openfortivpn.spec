@@ -1,14 +1,14 @@
 Name:           openfortivpn
-Version:        1.14.1
-Release:        1
 Summary:        Client for PPP+SSL VPN tunnel services compatible with Fortinet
+Version:        1.15.0
+Release:        1
 License:        GPLv3+
 URL:            https://github.com/adrienverge/openfortivpn
-Source0:        %{name}-%{version}.tar.gz
+Source0:        %{name}-%{version}.tar.bz2
 Patch0:         0001-Add-trust-all-certs-option.patch
 BuildRequires:  autoconf
 BuildRequires:  automake
-BuildRequires:  openssl-devel
+BuildRequires:  pkgconfig(openssl)
 BuildRequires:  pkgconfig(systemd)
 Requires:       ppp
 
@@ -21,20 +21,20 @@ It is compatible with Fortinet VPNs.
 %autosetup -p1 -n %{name}-%{version}/upstream
 
 %build
-autoreconf -fi
-%configure
-make %{?_smp_mflags} V=1
+%reconfigure
+%make_build
 
 %install
 %make_install
+
+# We don't need config template and man pages on device
 rm -f %{buildroot}/%{_datadir}/openfortivpn/config.template
+rm -f %{buildroot}/%{_mandir}/man1/openfortivpn.1*
 
 %files
 %defattr(-,root,root,-)
+%license LICENSE LICENSE.OpenSSL
 %{_bindir}/openfortivpn
-%{_mandir}/man1/openfortivpn.1*
 %{_unitdir}/openfortivpn@.service
 %dir %{_sysconfdir}/openfortivpn
 %config(noreplace) %{_sysconfdir}/openfortivpn/config
-%doc README.md
-%license LICENSE LICENSE.OpenSSL
