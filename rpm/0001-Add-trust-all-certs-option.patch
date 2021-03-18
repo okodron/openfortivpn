@@ -1,4 +1,4 @@
-From d74b07811b4dda490b964f7f2b743833cdfb07d5 Mon Sep 17 00:00:00 2001
+From daab6570e7fb4e4ff3431198e9682e0e1c27101c Mon Sep 17 00:00:00 2001
 From: Alexey Andreev <a.andreev@omprussia.ru>
 Date: Fri, 29 May 2020 14:49:38 +0300
 Subject: [PATCH] Add `trust-all-certs` option.
@@ -16,18 +16,18 @@ Signed-off-by: Andrey Okoshkin <a.okoshkin@omprussia.ru>
  4 files changed, 22 insertions(+)
 
 diff --git a/src/config.c b/src/config.c
-index 1e80998..1f39a19 100644
+index d30e7a6..b4b8e9e 100644
 --- a/src/config.c
 +++ b/src/config.c
-@@ -75,6 +75,7 @@ const struct vpn_config invalid_cfg = {
- 	.user_cert = NULL,
- 	.user_key = NULL,
+@@ -78,6 +78,7 @@ const struct vpn_config invalid_cfg = {
+ 	.pem_passphrase = {'\0'},
+ 	.pem_passphrase_set = 0,
  	.insecure_ssl = -1,
 +	.trust_all_certs = -1,
  	.cipher_list = NULL,
  	.min_tls = -1,
  	.seclevel_1 = -1,
-@@ -416,6 +417,15 @@ int load_config(struct vpn_config *cfg, const char *filename)
+@@ -425,6 +426,15 @@ int load_config(struct vpn_config *cfg, const char *filename)
  				continue;
  			}
  			cfg->insecure_ssl = insecure_ssl;
@@ -43,7 +43,7 @@ index 1e80998..1f39a19 100644
  		} else if (strcmp(key, "cipher-list") == 0) {
  			free(cfg->cipher_list);
  			cfg->cipher_list = strdup(val);
-@@ -577,6 +587,8 @@ void merge_config(struct vpn_config *dst, struct vpn_config *src)
+@@ -591,6 +601,8 @@ void merge_config(struct vpn_config *dst, struct vpn_config *src)
  	}
  	if (src->insecure_ssl != invalid_cfg.insecure_ssl)
  		dst->insecure_ssl = src->insecure_ssl;
@@ -53,22 +53,22 @@ index 1e80998..1f39a19 100644
  		free(dst->cipher_list);
  		dst->cipher_list = src->cipher_list;
 diff --git a/src/config.h b/src/config.h
-index 25f3863..ecd1d0b 100644
+index f7783e1..e3d3e1e 100644
 --- a/src/config.h
 +++ b/src/config.h
-@@ -115,6 +115,7 @@ struct vpn_config {
- 	char			*user_cert;
- 	char			*user_key;
+@@ -124,6 +124,7 @@ struct vpn_config {
+ 	char			pem_passphrase[PEM_PASSPHRASE_SIZE + 1];
+ 	int			pem_passphrase_set;
  	int			insecure_ssl;
 +	int			trust_all_certs;
  	int			min_tls;
  	int			seclevel_1;
  	char			*cipher_list;
 diff --git a/src/main.c b/src/main.c
-index d28e75d..6e1fc29 100644
+index 1ba130a..f398b74 100644
 --- a/src/main.c
 +++ b/src/main.c
-@@ -151,6 +151,7 @@ PPPD_USAGE \
+@@ -150,6 +150,7 @@ PPPD_USAGE \
  "                                Also enable TLS v1.0 if applicable.\n" \
  "                                If your server requires a specific cipher or protocol,\n" \
  "                                consider using --cipher-list and/or --min-tls instead.\n" \
@@ -76,27 +76,27 @@ index d28e75d..6e1fc29 100644
  "  --cipher-list=<ciphers>       OpenSSL ciphers to use. If default does not work\n" \
  "                                you can try with the cipher suggested in the output\n" \
  "                                of 'openssl s_client -connect <host:port>'\n" \
-@@ -226,6 +227,7 @@ int main(int argc, char **argv)
- 		.user_cert = NULL,
- 		.user_key = NULL,
+@@ -228,6 +229,7 @@ int main(int argc, char **argv)
+ 		.pem_passphrase = {'\0'},
+ 		.pem_passphrase_set = 0,
  		.insecure_ssl = 0,
 +		.trust_all_certs = 0,
  #ifdef TLS1_2_VERSION
  		.min_tls = TLS1_2_VERSION,
  #else
-@@ -264,6 +266,7 @@ int main(int argc, char **argv)
- 		{"user-key",        required_argument, NULL, 0},
- 		{"trusted-cert",    required_argument, NULL, 0},
- 		{"insecure-ssl",    no_argument, &cli_cfg.insecure_ssl, 1},
-+		{"trust-all-certs", no_argument, &cli_cfg.trust_all_certs, 1 },
- 		{"cipher-list",     required_argument, NULL, 0},
- 		{"min-tls",         required_argument, NULL, 0},
- 		{"seclevel-1",      no_argument, &cli_cfg.seclevel_1, 1},
+@@ -267,6 +269,7 @@ int main(int argc, char **argv)
+ 		{"pem-passphrase",       required_argument, NULL, 0},
+ 		{"trusted-cert",         required_argument, NULL, 0},
+ 		{"insecure-ssl",         no_argument, &cli_cfg.insecure_ssl, 1},
++		{"trust-all-certs",      no_argument, &cli_cfg.trust_all_certs, 1 },
+ 		{"cipher-list",          required_argument, NULL, 0},
+ 		{"min-tls",              required_argument, NULL, 0},
+ 		{"seclevel-1",           no_argument, &cli_cfg.seclevel_1, 1},
 diff --git a/src/tunnel.c b/src/tunnel.c
-index 32a5e39..50aef28 100644
+index 95dafc7..0cbd1fb 100644
 --- a/src/tunnel.c
 +++ b/src/tunnel.c
-@@ -787,6 +787,12 @@ static int ssl_verify_cert(struct tunnel *tunnel)
+@@ -903,6 +903,12 @@ static int ssl_verify_cert(struct tunnel *tunnel)
  	for (i = 0; i < SHA256LEN; i++)
  		sprintf(&digest_str[2 * i], "%02x", digest[i]);
  	digest_str[SHA256STRLEN - 1] = '\0';
@@ -110,5 +110,5 @@ index 32a5e39..50aef28 100644
  	for (elem = tunnel->config->cert_whitelist; elem != NULL;
  	     elem = elem->next)
 -- 
-2.28.0
+2.30.0
 
