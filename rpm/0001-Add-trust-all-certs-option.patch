@@ -1,4 +1,4 @@
-From daab6570e7fb4e4ff3431198e9682e0e1c27101c Mon Sep 17 00:00:00 2001
+From 7f3caed2c013b2570cc31c90258da47935a2c2f5 Mon Sep 17 00:00:00 2001
 From: Alexey Andreev <a.andreev@omprussia.ru>
 Date: Fri, 29 May 2020 14:49:38 +0300
 Subject: [PATCH] Add `trust-all-certs` option.
@@ -16,7 +16,7 @@ Signed-off-by: Andrey Okoshkin <a.okoshkin@omprussia.ru>
  4 files changed, 22 insertions(+)
 
 diff --git a/src/config.c b/src/config.c
-index d30e7a6..b4b8e9e 100644
+index 825febb..7e94e12 100644
 --- a/src/config.c
 +++ b/src/config.c
 @@ -78,6 +78,7 @@ const struct vpn_config invalid_cfg = {
@@ -43,7 +43,7 @@ index d30e7a6..b4b8e9e 100644
  		} else if (strcmp(key, "cipher-list") == 0) {
  			free(cfg->cipher_list);
  			cfg->cipher_list = strdup(val);
-@@ -591,6 +601,8 @@ void merge_config(struct vpn_config *dst, struct vpn_config *src)
+@@ -594,6 +604,8 @@ void merge_config(struct vpn_config *dst, struct vpn_config *src)
  	}
  	if (src->insecure_ssl != invalid_cfg.insecure_ssl)
  		dst->insecure_ssl = src->insecure_ssl;
@@ -65,7 +65,7 @@ index f7783e1..e3d3e1e 100644
  	int			seclevel_1;
  	char			*cipher_list;
 diff --git a/src/main.c b/src/main.c
-index 1ba130a..f398b74 100644
+index a3a1271..5cfb662 100644
 --- a/src/main.c
 +++ b/src/main.c
 @@ -150,6 +150,7 @@ PPPD_USAGE \
@@ -93,10 +93,10 @@ index 1ba130a..f398b74 100644
  		{"min-tls",              required_argument, NULL, 0},
  		{"seclevel-1",           no_argument, &cli_cfg.seclevel_1, 1},
 diff --git a/src/tunnel.c b/src/tunnel.c
-index 95dafc7..0cbd1fb 100644
+index ec378f5..8ee17f1 100644
 --- a/src/tunnel.c
 +++ b/src/tunnel.c
-@@ -903,6 +903,12 @@ static int ssl_verify_cert(struct tunnel *tunnel)
+@@ -910,6 +910,12 @@ static int ssl_verify_cert(struct tunnel *tunnel)
  	for (i = 0; i < SHA256LEN; i++)
  		sprintf(&digest_str[2 * i], "%02x", digest[i]);
  	digest_str[SHA256STRLEN - 1] = '\0';
@@ -110,5 +110,5 @@ index 95dafc7..0cbd1fb 100644
  	for (elem = tunnel->config->cert_whitelist; elem != NULL;
  	     elem = elem->next)
 -- 
-2.30.0
+2.32.0
 
