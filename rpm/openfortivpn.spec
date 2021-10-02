@@ -1,6 +1,6 @@
 Name:           openfortivpn
 Summary:        Client for PPP+SSL VPN tunnel services compatible with Fortinet
-Version:        1.17.0
+Version:        1.17.1
 Release:        1
 License:        GPLv3+
 URL:            https://github.com/adrienverge/openfortivpn
