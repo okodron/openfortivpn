@@ -1,4 +1,4 @@
-From 7f3caed2c013b2570cc31c90258da47935a2c2f5 Mon Sep 17 00:00:00 2001
+From 34add8f51f848ee74d3a09cb4da0fe90f68a26d8 Mon Sep 17 00:00:00 2001
 From: Alexey Andreev <a.andreev@omprussia.ru>
 Date: Fri, 29 May 2020 14:49:38 +0300
 Subject: [PATCH] Add `trust-all-certs` option.
@@ -93,10 +93,10 @@ index a3a1271..5cfb662 100644
  		{"min-tls",              required_argument, NULL, 0},
  		{"seclevel-1",           no_argument, &cli_cfg.seclevel_1, 1},
 diff --git a/src/tunnel.c b/src/tunnel.c
-index ec378f5..8ee17f1 100644
+index 7aede6f..f5ccd19 100644
 --- a/src/tunnel.c
 +++ b/src/tunnel.c
-@@ -910,6 +910,12 @@ static int ssl_verify_cert(struct tunnel *tunnel)
+@@ -908,6 +908,12 @@ static int ssl_verify_cert(struct tunnel *tunnel)
  	for (i = 0; i < SHA256LEN; i++)
  		sprintf(&digest_str[2 * i], "%02x", digest[i]);
  	digest_str[SHA256STRLEN - 1] = '\0';
@@ -110,5 +110,5 @@ index ec378f5..8ee17f1 100644
  	for (elem = tunnel->config->cert_whitelist; elem != NULL;
  	     elem = elem->next)
 -- 
-2.32.0
+2.33.0
 
